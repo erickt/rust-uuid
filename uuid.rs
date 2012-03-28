@@ -1,5 +1,3 @@
-import ctypes;
-import ptr;
 
 #[doc = "a uuid value"]
 type uuid = {
@@ -15,7 +13,7 @@ native mod libuuid {
     fn uuid_generate_random(out: uuid);
     fn uuid_generate_time(out: uuid);
 
-    fn uuid_parse(s: *u8, uuid: uuid) -> ctypes::c_int;
+    fn uuid_parse(s: *u8, uuid: uuid) -> libc::c_int;
 
     fn uuid_unparse(uuid: uuid, out: *u8);
     fn uuid_unparse_lower(uuid: uuid, out: *u8);
