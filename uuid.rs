@@ -14,7 +14,7 @@ type uuid = {
 
 #[cfg(target_os = "macos")]
 #[nolink]
-native mod uuid {
+extern mod uuid {
     fn uuid_generate(out: uuid);
     fn uuid_generate_random(out: uuid);
     fn uuid_generate_time(out: uuid);
@@ -28,7 +28,7 @@ native mod uuid {
 
 #[cfg(target_os = "linux")]
 #[cfg(target_os = "freebsd")]
-native mod uuid {
+extern mod uuid {
     fn uuid_generate(out: uuid);
     fn uuid_generate_random(out: uuid);
     fn uuid_generate_time(out: uuid);
@@ -66,7 +66,7 @@ fn to_str(uuid: uuid) -> str {
     let mut s = "";
     str::reserve(s, 36u);
     unsafe { str::unsafe::set_len(s, 36u); }
-    str::as_buf(s) { |buf|
+    do str::as_buf(s) |buf| {
         uuid::uuid_unparse(uuid, buf);
     }
     s
@@ -77,7 +77,7 @@ fn from_str(s: str) -> uuid {
     assert str::len(s) == 36u;
 
     let uuid = { a: 0u32, b: 0u32, c: 0u32, d: 0u32 }; 
-    str::as_buf(s) { |buf|
+    do str::as_buf(s) |buf| {
         uuid::uuid_parse(buf, uuid);
     }
     uuid
@@ -87,7 +87,7 @@ fn from_str(s: str) -> uuid {
 mod test {
     #[test]
     fn test() {
-        uint::range(0u, 100000u) { |_i|
+        for uint::range(0u, 100000u) |_i| {
             let uuid = uuid();
             assert uuid == from_str(to_str(uuid));
 
