@@ -1,3 +1,2 @@
-*.dylib
-*.dSYM
-uuid
+lib
+test
