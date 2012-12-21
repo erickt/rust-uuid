@@ -22,69 +22,50 @@ extern mod uuid {
 #[cfg(target_os = "linux")]
 #[cfg(target_os = "freebsd")]
 extern mod uuid {
-    fn uuid_generate(out: UUID);
-    fn uuid_generate_random(out: UUID);
-    fn uuid_generate_time(out: UUID);
+    fn uuid_generate(out: &mut UUID);
+    fn uuid_generate_random(out: &mut UUID);
+    fn uuid_generate_time(out: &mut UUID);
 
-    fn uuid_parse(s: *u8, uuid: UUID) -> libc::c_int;
+    fn uuid_parse(s: *u8, uuid: &UUID) -> libc::c_int;
 
-    fn uuid_unparse(uuid: UUID, out: *u8);
-    fn uuid_unparse_lower(uuid: UUID, out: *u8);
-    fn uuid_unparse_upper(uuid: UUID, out: *u8);
+    fn uuid_unparse(uuid: &UUID, out: *u8);
+    fn uuid_unparse_lower(uuid: &UUID, out: *u8);
+    fn uuid_unparse_upper(uuid: &UUID, out: *u8);
 }
 
 /// a uuid value
-pub struct UUID {
-    a: u32,
-    b: u32,
-    c: u32,
-    d: u32,
-}
+pub struct UUID([u8 * 36]);
 
 impl UUID {
     /// Create a new uuid
     static fn new() -> UUID {
-        let mut uuid = UUID { a: 0u32, b: 0u32, c: 0u32, d: 0u32 };
+        let mut uuid = UUID([0, ..36]);
         uuid::uuid_generate(&mut uuid);
         uuid
     }
 
     /// Create a uuid from the current time and mac address
     static fn new_random() -> UUID {
-        let mut uuid = UUID { a: 0u32, b: 0u32, c: 0u32, d: 0u32 };
+        let mut uuid = UUID([0, ..36]);
         uuid::uuid_generate_random(&mut uuid);
         uuid
     }
 
     /// Create a uuid from a random number generator
     static fn new_time() -> UUID {
-        let mut uuid = UUID { a: 0u32, b: 0u32, c: 0u32, d: 0u32 };
+        let mut uuid = UUID([0, ..36]);
         uuid::uuid_generate_time(&mut uuid);
         uuid
     }
 }
 
 impl UUID: cmp::Eq {
-    pure fn eq(&self, other: &UUID) -> bool {
-        self.a == other.a &&
-        self.b == other.b &&
-        self.c == other.c &&
-        self.d == other.d
-    }
-
+    pure fn eq(&self, other: &UUID) -> bool { **self == **other }
     pure fn ne(&self, other: &UUID) -> bool { !self.eq(other) }
 }
 
 impl UUID: cmp::Ord {
-    pure fn lt(&self, other: &UUID) -> bool {
-        if self.a < other.a { return true; }
-        if other.a < self.a { return false; }
-        if self.b < other.b { return true; }
-        if other.b < self.b { return false; }
-        if self.c < other.c { return true; }
-        if other.c < self.c { return false; }
-        self.d < other.d
-    }
+    pure fn lt(&self, other: &UUID) -> bool { **self < **other }
     pure fn le(&self, other: &UUID) -> bool { !(*other).lt(self) }
     pure fn ge(&self, other: &UUID) -> bool { !self.lt(other) }
     pure fn gt(&self, other: &UUID) -> bool { (*other).lt(self) }
@@ -102,20 +83,18 @@ pub impl UUID: to_str::ToStr {
     }
 }
 
-pub pure fn from_str(s: &str) -> Option<UUID> {
-    assert s.len() == 36u;
-
-    let uuid = UUID { a: 0u32, b: 0u32, c: 0u32, d: 0u32 }; 
-    let r = do str::as_buf(s) |buf, _len| {
-        unsafe { uuid::uuid_parse(buf, &uuid) }
-    };
-
-    if r == 0 { Some(uuid) } else { None }
-}
-
 /// Convert a string to a uuid
 impl UUID: from_str::FromStr {
-    static pure fn from_str(s: &str) -> Option<UUID> { from_str(s) }
+    static pure fn from_str(s: &str) -> Option<UUID> {
+        assert s.len() <= 36u;
+        let mut uuid = UUID([0, ..36]);
+
+        let r = do str::as_buf(s) |buf, _| {
+            unsafe { uuid::uuid_parse(buf, &uuid) }
+        };
+
+        if r == 0 { Some(uuid) } else { None }
+    }
 }
 
 #[cfg(test)]
@@ -123,24 +102,40 @@ mod test {
     pub use from_str::FromStr;
 
     #[test]
+    fn test_invalid() {
+        let s = "                                    ";
+        assert FromStr::from_str::<UUID>(s) == None;
+    }
+
+    #[test]
     fn test_valid() {
-        for uint::range(0u, 100000u) |_i| {
+        for uint::range(0u, 100000) |_| {
             let uuid = UUID::new();
-            assert uuid.a != 0 && uuid.b != 0 && uuid.c != 0 && uuid.d != 0;
-            assert from_str(uuid.to_str()) == Some(uuid);
+            assert *uuid != [0, ..36];
+            assert FromStr::from_str(uuid.to_str()) == Some(uuid);
 
             let uuid = UUID::new_random();
-            assert uuid.a != 0 && uuid.b != 0 && uuid.c != 0 && uuid.d != 0;
-            assert from_str(uuid.to_str()) == Some(uuid);
+            assert *uuid != [0, ..36];
+            assert FromStr::from_str(uuid.to_str()) == Some(uuid);
 
             let uuid = UUID::new_time();
-            assert uuid.a != 0 && uuid.b != 0 && uuid.c != 0 && uuid.d != 0;
-            assert from_str(uuid.to_str()) == Some(uuid)
+            assert *uuid != [0, ..36];
+            assert FromStr::from_str(uuid.to_str()) == Some(uuid)
         }
     }
 
     #[test]
-    fn test_invalid() {
-        assert from_str("                                    ") == None;
+    fn test_ordering() {
+        let s1 = "00000000-0000-0000-0000-000000000000";
+        let s2 = "00000000-0000-0000-0000-000000000001";
+
+        let u1 = FromStr::from_str::<UUID>(s1).unwrap();
+        let u2 = FromStr::from_str::<UUID>(s2).unwrap();
+
+        assert u1 < u2;
+        assert u2 > u1;
+
+        assert u1 <= u1;
+        assert u2 >= u2;
     }
 }
