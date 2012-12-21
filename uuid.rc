@@ -41,6 +41,29 @@ pub struct UUID {
     d: u32,
 }
 
+impl UUID {
+    /// Create a new uuid
+    static fn new() -> UUID {
+        let mut uuid = UUID { a: 0u32, b: 0u32, c: 0u32, d: 0u32 };
+        uuid::uuid_generate(&mut uuid);
+        uuid
+    }
+
+    /// Create a uuid from the current time and mac address
+    static fn new_random() -> UUID {
+        let mut uuid = UUID { a: 0u32, b: 0u32, c: 0u32, d: 0u32 };
+        uuid::uuid_generate_random(&mut uuid);
+        uuid
+    }
+
+    /// Create a uuid from a random number generator
+    static fn new_time() -> UUID {
+        let mut uuid = UUID { a: 0u32, b: 0u32, c: 0u32, d: 0u32 };
+        uuid::uuid_generate_time(&mut uuid);
+        uuid
+    }
+}
+
 impl UUID: cmp::Eq {
     pure fn eq(&self, other: &UUID) -> bool {
         self.a == other.a &&
@@ -65,27 +88,6 @@ impl UUID: cmp::Ord {
     pure fn le(&self, other: &UUID) -> bool { !(*other).lt(self) }
     pure fn ge(&self, other: &UUID) -> bool { !self.lt(other) }
     pure fn gt(&self, other: &UUID) -> bool { (*other).lt(self) }
-}
-
-/// Create a new uuid
-pub fn UUID() -> UUID {
-    let mut uuid = UUID { a: 0u32, b: 0u32, c: 0u32, d: 0u32 };
-    uuid::uuid_generate(&mut uuid);
-    uuid
-}
-
-/// Create a uuid from the current time and mac address
-pub fn UUID_random() -> UUID {
-    let mut uuid = UUID { a: 0u32, b: 0u32, c: 0u32, d: 0u32 };
-    uuid::uuid_generate_random(&mut uuid);
-    uuid
-}
-
-/// Create a uuid from a random number generator
-pub fn UUID_time() -> UUID {
-    let mut uuid = UUID { a: 0u32, b: 0u32, c: 0u32, d: 0u32 };
-    uuid::uuid_generate_time(&mut uuid);
-    uuid
 }
 
 /// Convert a uuid to a string
@@ -123,15 +125,15 @@ mod test {
     #[test]
     fn test_valid() {
         for uint::range(0u, 100000u) |_i| {
-            let uuid = UUID();
+            let uuid = UUID::new();
             assert uuid.a != 0 && uuid.b != 0 && uuid.c != 0 && uuid.d != 0;
             assert from_str(uuid.to_str()) == Some(uuid);
 
-            let uuid = UUID_random();
+            let uuid = UUID::new_random();
             assert uuid.a != 0 && uuid.b != 0 && uuid.c != 0 && uuid.d != 0;
             assert from_str(uuid.to_str()) == Some(uuid);
 
-            let uuid = UUID_time();
+            let uuid = UUID::new_time();
             assert uuid.a != 0 && uuid.b != 0 && uuid.c != 0 && uuid.d != 0;
             assert from_str(uuid.to_str()) == Some(uuid)
         }
