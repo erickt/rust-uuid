@@ -1,5 +1,5 @@
 #[link(name = "uuid",
-       vers = "0.2",
+       vers = "0.3",
        uuid = "3ef20bf5-f609-4c96-bfb5-8e617274e705")];
 #[crate_type = "lib"];
 
@@ -34,49 +34,49 @@ extern mod uuid {
 }
 
 /// a uuid value
-pub struct UUID([u8 * 36]);
+pub struct UUID([u8, .. 36]);
 
 impl UUID {
     /// Create a new uuid
-    static fn new() -> UUID {
+    fn new() -> UUID {
         let mut uuid = UUID([0, ..36]);
-        uuid::uuid_generate(&mut uuid);
+        unsafe { uuid::uuid_generate(&mut uuid) };
         uuid
     }
 
     /// Create a uuid from the current time and mac address
-    static fn new_random() -> UUID {
+    fn new_random() -> UUID {
         let mut uuid = UUID([0, ..36]);
-        uuid::uuid_generate_random(&mut uuid);
+        unsafe { uuid::uuid_generate_random(&mut uuid) };
         uuid
     }
 
     /// Create a uuid from a random number generator
-    static fn new_time() -> UUID {
+    fn new_time() -> UUID {
         let mut uuid = UUID([0, ..36]);
-        uuid::uuid_generate_time(&mut uuid);
+        unsafe { uuid::uuid_generate_time(&mut uuid) };
         uuid
     }
 }
 
-impl UUID: cmp::Eq {
-    pure fn eq(&self, other: &UUID) -> bool { **self == **other }
-    pure fn ne(&self, other: &UUID) -> bool { !self.eq(other) }
+impl cmp::Eq for UUID {
+    fn eq(&self, other: &UUID) -> bool { **self == **other }
+    fn ne(&self, other: &UUID) -> bool { !self.eq(other) }
 }
 
-impl UUID: cmp::Ord {
-    pure fn lt(&self, other: &UUID) -> bool { **self < **other }
-    pure fn le(&self, other: &UUID) -> bool { !(*other).lt(self) }
-    pure fn ge(&self, other: &UUID) -> bool { !self.lt(other) }
-    pure fn gt(&self, other: &UUID) -> bool { (*other).lt(self) }
+impl cmp::Ord for UUID {
+    fn lt(&self, other: &UUID) -> bool { **self < **other }
+    fn le(&self, other: &UUID) -> bool { !(*other).lt(self) }
+    fn ge(&self, other: &UUID) -> bool { !self.lt(other) }
+    fn gt(&self, other: &UUID) -> bool { (*other).lt(self) }
 }
 
 /// Convert a uuid to a string
-pub impl UUID: to_str::ToStr {
-    pure fn to_str() -> ~str {
+impl ToStr for UUID {
+    fn to_str(&self) -> ~str {
         let mut s = str::with_capacity(36);
         do str::as_buf(s) |buf, _| {
-            unsafe { uuid::uuid_unparse(&self, buf) };
+            unsafe { uuid::uuid_unparse(self, buf) };
         }
         unsafe { str::raw::set_len(&mut s, 36u); }
         s
@@ -84,9 +84,9 @@ pub impl UUID: to_str::ToStr {
 }
 
 /// Convert a string to a uuid
-impl UUID: from_str::FromStr {
-    static pure fn from_str(s: &str) -> Option<UUID> {
-        assert s.len() <= 36u;
+impl core::from_str::FromStr for UUID {
+    fn from_str(s: &str) -> Option<UUID> {
+        assert_eq!(s.len(), 36u);
         let mut uuid = UUID([0, ..36]);
 
         let r = do str::as_buf(s) |buf, _| {
@@ -99,28 +99,29 @@ impl UUID: from_str::FromStr {
 
 #[cfg(test)]
 mod test {
-    pub use from_str::FromStr;
+    use super::*;
+    use core::from_str::FromStr;
 
     #[test]
     fn test_invalid() {
         let s = "                                    ";
-        assert FromStr::from_str::<UUID>(s) == None;
+        assert_eq!(FromStr::from_str::<UUID>(s), None);
     }
 
     #[test]
     fn test_valid() {
         for uint::range(0u, 100000) |_| {
             let uuid = UUID::new();
-            assert *uuid != [0, ..36];
-            assert FromStr::from_str(uuid.to_str()) == Some(uuid);
+            assert!(*uuid != [0, ..36]);
+            assert!(FromStr::from_str(uuid.to_str()) == Some(uuid));
 
             let uuid = UUID::new_random();
-            assert *uuid != [0, ..36];
-            assert FromStr::from_str(uuid.to_str()) == Some(uuid);
+            assert!(*uuid != [0, ..36]);
+            assert!(FromStr::from_str(uuid.to_str()) == Some(uuid));
 
             let uuid = UUID::new_time();
-            assert *uuid != [0, ..36];
-            assert FromStr::from_str(uuid.to_str()) == Some(uuid)
+            assert!(*uuid != [0, ..36]);
+            assert!(FromStr::from_str(uuid.to_str()) == Some(uuid));
         }
     }
 
@@ -132,10 +133,10 @@ mod test {
         let u1 = FromStr::from_str::<UUID>(s1).unwrap();
         let u2 = FromStr::from_str::<UUID>(s2).unwrap();
 
-        assert u1 < u2;
-        assert u2 > u1;
+        assert!(u1 < u2);
+        assert!(u2 > u1);
 
-        assert u1 <= u1;
-        assert u2 >= u2;
+        assert!(u1 <= u1);
+        assert!(u2 >= u2);
     }
 }
