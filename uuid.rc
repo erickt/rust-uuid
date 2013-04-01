@@ -1,5 +1,5 @@
 #[link(name = "uuid",
-       vers = "0.3",
+       vers = "0.3.0",
        uuid = "3ef20bf5-f609-4c96-bfb5-8e617274e705")];
 #[crate_type = "lib"];
 
